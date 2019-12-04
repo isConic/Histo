@@ -1,22 +1,50 @@
 import yaml
 import googlemaps
 from datetime import datetime
+import pprint
+import streamlit as st
+import numpy as np
+
+
+pp = pprint.PrettyPrinter(indent=4)
+
 
 configs = yaml.load(open("configs/google_api.yaml", "r"))
 client_key = configs["client_key"]
-print(client_key)
 
-gmaps = googlemaps.Client(key='Add Your Key here')
+def calc_zoom(west_lng, east_lng):
+    GLOBE_WIDTH = 256
+    angle = east_lng - west_lng
+    if angle < 0:
+        angle += 360
 
-# Geocoding an address
-geocode_result = gmaps.geocode('1600 Amphitheatre Parkway, Mountain View, CA')
+    zoom = int((np.log(256*360 / angle / GLOBE_WIDTH)/np.log(2))//1)
+    return zoom
 
-# Look up an address with reverse geocoding
-reverse_geocode_result = gmaps.reverse_geocode((40.714224, -73.961452))
 
-# Request directions via public transit
-now = datetime.now()
-directions_result = gmaps.directions("Sydney Town Hall",
-                                     "Parramatta, NSW",
-                                     mode="transit",
-                                     departure_time=now)
+gmaps = googlemaps.Client(key=client_key)
+
+selection = st.text_input("Select area")
+
+geocode_results = gmaps.geocode(selection)
+
+names = [*map(lambda x: x["formatted_address"], geocode_results)]
+
+st.text(f"Current Selection: {names[0]}")
+st.text(f"Other Options: {names[1:]}")
+
+current = geocode_results[0]
+
+coords =  (current["geometry"]["location"]["lat"],
+           current["geometry"]["location"]["lng"])
+
+
+id     =   current["place_id"]
+
+east_lng, west_lng = (current["geometry"]["bounds"]["northeast"]["lng"], current["geometry"]["bounds"]["southwest"]["lng"])
+zoom = calc_zoom(west_lng, east_lng)
+
+st.deck_gl_chart( viewport={ 'latitude': coords[0], 'longitude': coords[1], 'zoom': zoom + 2, 'pitch': 50,})
+
+st.json(geocode_results)
+
