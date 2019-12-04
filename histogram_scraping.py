@@ -46,5 +46,13 @@ zoom = calc_zoom(west_lng, east_lng)
 
 st.deck_gl_chart( viewport={ 'latitude': coords[0], 'longitude': coords[1], 'zoom': zoom + 2, 'pitch': 50,})
 
-st.json(geocode_results)
+
+places = gmaps.places_nearby(location=coords,
+                                  language="EN", min_price=1,
+                                  max_price=4, name='food', open_now=True,
+                                  rank_by='distance', type = ["cafe", "restaurant"])
+st.text(len(places["results"]))
+
+st.json(places)
+# st.json(geocode_results)
 
